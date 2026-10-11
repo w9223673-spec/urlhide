@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL域名伪装</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            padding: 40px;
+            width: 100%;
+            max-width: 700px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 24px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            color: #555;
+            font-size: 14px;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: border-color 0.3s;
+            outline: none;
+            font-family: inherit;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus {
+            border-color: #667eea;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+            background: #fafafa;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 28px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            width: 100%;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-copy {
+            background: #4caf50;
+            color: #fff;
+            margin-top: 12px;
+            width: 100%;
+        }
+
+        .btn-copy:hover {
+            background: #43a047;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(76, 175, 80, 0.4);
+        }
+
+        .btn-copy.copied {
+            background: #2196f3;
+        }
+
+        .result-box {
+            margin-top: 20px;
+        }
+
+        .result-box textarea {
+            background: #f5f5f5;
+            font-family: "Consolas", "Monaco", monospace;
+            font-size: 13px;
+            color: #333;
+            word-break: break-all;
+        }
+
+        .hint {
+            color: #999;
+            font-size: 12px;
+            margin-top: 6px;
+        }
+
+        .example {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #555;
+        }
+
+        .example strong {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>URL域名伪装</h1>
+        <p class="subtitle">输入网址，自动将开头转化为合规的域名</p>
+
+        <div class="example">
+            <strong>示例：</strong>输入 <code>www.qq.com</code> → 自动补全为 <code>https://www.qq.com</code> → 编码后拼接至跳转链接
+        </div>
+
+        <div class="form-group">
+            <label for="urlInput">请输入网址（域名或完整URL）：</label>
+            <input type="text" id="urlInput" placeholder="例如：www.qq.com 或 https://www.qq.com" autocomplete="off">
+            <p class="hint">支持输入纯域名（如 www.qq.com）或带协议的完整网址（如 https://www.qq.com）</p>
+        </div>
+
+        <button class="btn btn-primary" onclick="encodeAndShow()">生成编码结果</button>
+
+        <div class="result-box" id="resultBox" style="display:none;">
+            <label for="resultOutput">编码结果：</label>
+            <textarea id="resultOutput" readonly></textarea>
+            <button class="btn btn-copy" id="copyBtn" onclick="copyResult()">
+                <span id="copyText">一键复制</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * 将所有字符（包括英文字母和数字）全部编码为 %XX 格式
+         * 例如：https://www.qq.com → %68%74%74%70%73%3A%2F%2Fwww.qq.com
+         */
+        function encodeAllChars(str) {
+            var result = '';
+            for (var i = 0; i < str.length; i++) {
+                var charCode = str.charCodeAt(i);
+                // 将每个字符的Unicode码点转为十六进制，加上%前缀
+                var hex = charCode.toString(16).toUpperCase();
+                // 如果十六进制不足2位，前面补0
+                if (hex.length < 2) {
+                    hex = '0' + hex;
+                }
+                result += '%' + hex;
+            }
+            return result;
+        }
+
+        function encodeAndShow() {
+            var raw = document.getElementById('urlInput').value.trim();
+            if (!raw) {
+                alert('请输入网址！');
+                return;
+            }
+
+            // 如果没有 https:// 前缀，则加上
+            var url = raw;
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                url = 'https://' + url;
+            }
+
+            // 对所有字符进行URL编码（包括英文字母和数字）
+            var encoded = encodeAllChars(url);
+
+            // 拼接最终结果
+            var finalUrl = 'https://m.gamer.qq.com/v2/login/qqSilence?redirect=' + encoded;
+
+            // 显示结果
+            document.getElementById('resultOutput').value = finalUrl;
+            document.getElementById('resultBox').style.display = 'block';
+
+            // 重置复制按钮状态
+            var copyBtn = document.getElementById('copyBtn');
+            copyBtn.classList.remove('copied');
+            document.getElementById('copyText').textContent = '一键复制';
+        }
+
+        function copyResult() {
+            var output = document.getElementById('resultOutput');
+            output.select();
+            output.setSelectionRange(0, 99999);
+
+            try {
+                navigator.clipboard.writeText(output.value).then(function() {
+                    showCopied();
+                }).catch(function() {
+                    document.execCommand('copy');
+                    showCopied();
+                });
+            } catch (e) {
+                document.execCommand('copy');
+                showCopied();
+            }
+        }
+
+        function showCopied() {
+            var copyBtn = document.getElementById('copyBtn');
+            copyBtn.classList.add('copied');
+            document.getElementById('copyText').textContent = '已复制!';
+            setTimeout(function() {
+                copyBtn.classList.remove('copied');
+                document.getElementById('copyText').textContent = '一键复制';
+            }, 2000);
+        }
+
+        // 支持回车键触发编码
+        document.getElementById('urlInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                encodeAndShow();
+            }
+        });
+    </script>
+</body>
+</html>
